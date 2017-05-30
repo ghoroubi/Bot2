@@ -1,0 +1,2 @@
+1-go build
+2-run exe file in the bot folder
