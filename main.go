@@ -16,9 +16,8 @@ var bot *tgbotapi.BotAPI
 var dbName, password, userId, server string
 var token string
 var occasion string
-var showOccasion bool
-var OccasionButton, AboutGift string
 var maxRand int
+var vcf string
 
 func DbConnect() {
 
@@ -49,47 +48,17 @@ func main() {
 	for update := range updates {
 		if update.Message.Text == "/start" {
 			SendTextMessage(update.Message.Chat.ID, welcome, GetHomeKeys)
-		} else if update.Message.Text == Charg7 {
-			SendForceReply(update.Message.Chat.ID, EnterPhone7)
-		} else if update.Message.Text == Charg15 {
-			SendForceReply(update.Message.Chat.ID, EnterPhone15)
-		} else if update.Message.Text == Charg30 {
-			SendForceReply(update.Message.Chat.ID, EnterPhone30)
-		} else if update.Message.Text == Charg45 {
-			SendForceReply(update.Message.Chat.ID, EnterPhone45)
-		} else if update.Message.Text == Charg90 {
-			SendForceReply(update.Message.Chat.ID, EnterPhone90)
-		} else if update.Message.Text == AboutGiftKey {
-			AboutKeys(update.Message.Chat.ID)
-		} else if update.Message.Text == AboutUsKey {
-			SendTextMessage(update.Message.Chat.ID, AboutUsVal, GetHomeKeys)
-		} else if update.Message.Text == ContactUsKey {
-			SendTextMessage(update.Message.Chat.ID, ContactUsVal, GetHomeKeys)
-		} else if update.Message.Text == BuyCharge {
-			ChargeKeys(update.Message.Chat.ID)
-		} else if update.Message.Text == OccasionButton {
-			DoChargeOccasion(update.Message.Chat.ID, update.Message.From.ID, 7500)
-
-		} else if update.Message.Text == CreditKey {
-			mobile, err := GetMobileNumber(update.Message.Chat.ID, update.Message.From.ID)
-			if err != nil {
-				SendError(update.Message.Chat.ID, GetHomeKeys)
-			} else {
-				if mobile != "" {
-					//
-					CheckCreditByMobile(update.Message.Chat.ID, update.Message.From.ID, mobile)
-
-				} else {
-
-					SendForceReply(update.Message.Chat.ID, EnterPhonePlz)
-				}
-			}
+		}else if update.Message.Text == ContactUsKey {
+			//SendTextMessage(update.Message.Chat.ID, ContactUsVal, GetHomeKeys)
+			SendVCF(update.Message.Chat.ID,vcf)
+		}  else if update.Message.Text == SummerPlan {
+			//SumPlan(update.Message.Chat.ID,update.Message.From.ID,GetPlanKeys)
+			SumPlan(update.Message.Chat.ID,GetPlanKeys)
 		} else if update.Message.Text == Home {
 			SendTextMessage(update.Message.Chat.ID, HomeDirected, GetHomeKeys)
-		} else if update.Message.Text == LotteryKey {
-			randC := random(50, 200)
 
-			DoCharge(update.Message.Chat.ID, update.Message.From.ID, randC)
+
+
 		} else if update.Message.ReplyToMessage != nil {
 			if update.Message.ReplyToMessage.Text == EnterPhonePlz {
 
@@ -105,16 +74,6 @@ func main() {
 				RKCharge(update.Message.Chat.ID, update.Message.Text, 7500, GetGiftKeys)
 			} else if update.Message.ReplyToMessage.Text == EnterPhoneForGift {
 				SendSecurityCode(update.Message.Chat.ID, update.Message.From.ID, update.Message.Text, "RandomCharge", GetGiftKeys)
-			} else if update.Message.ReplyToMessage.Text == EnterPhone7 {
-				SendTextMessage(update.Message.Chat.ID, "http://api.rayanehkomak.com/rk/gateway/smp?amount=7500&mobile="+update.Message.Text, GetHomeKeys)
-			} else if update.Message.ReplyToMessage.Text == EnterPhone15 {
-				SendTextMessage(update.Message.Chat.ID, "http://api.rayanehkomak.com/rk/gateway/smp?amount=15000&mobile="+update.Message.Text, GetHomeKeys)
-			} else if update.Message.ReplyToMessage.Text == EnterPhone30 {
-				SendTextMessage(update.Message.Chat.ID, "http://api.rayanehkomak.com/rk/gateway/smp?amount=30000&mobile="+update.Message.Text, GetHomeKeys)
-			} else if update.Message.ReplyToMessage.Text == EnterPhone45 {
-				SendTextMessage(update.Message.Chat.ID, "http://api.rayanehkomak.com/rk/gateway/smp?amount=45000&mobile="+update.Message.Text, GetHomeKeys)
-			} else if update.Message.ReplyToMessage.Text == EnterPhone90 {
-				SendTextMessage(update.Message.Chat.ID, "http://api.rayanehkomak.com/rk/gateway/smp?amount=90000&mobile="+update.Message.Text, GetHomeKeys)
 			}
 
 		}

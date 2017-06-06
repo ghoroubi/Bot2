@@ -13,7 +13,6 @@ func random(min, max int) int {
 }
 func GetConf() {
 	conf = viper.New()
-
 	conf.SetConfigName("conf")
 	conf.AddConfigPath(".")
 	conf.SetConfigType("yml")
@@ -21,20 +20,13 @@ func GetConf() {
 	if err != nil {
 		panic("could not configure app")
 	}
-
 	maxRand = conf.GetInt("public.MaxRandCharge")
-
 	token = conf.GetString("public.Token")
-	occasion = conf.GetString("occasion.Key")
-	showOccasion = conf.GetBool("occasion.Visible")
-	OccasionButton = conf.GetString("occasion.Button")
-	AboutGift = conf.GetString("occasion.AboutGift")
-
 	dbName = conf.GetString("db.Name")
 	password = conf.GetString("db.Password")
 	userId = conf.GetString("db.UserId")
 	server = conf.GetString("db.Server")
-
+	vcf=conf.GetString("file.VCFile")
 }
 
 func TodayStr() string {

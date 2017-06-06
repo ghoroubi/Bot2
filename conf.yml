@@ -6,3 +6,5 @@ db:
   Password: "6663ta6dareh"
   UserId: "offline"
   Server: "192.168.2.20/rkBank"
+file:
+  VCFile: "/Users/newuser/1.vcf"

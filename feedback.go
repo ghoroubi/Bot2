@@ -12,6 +12,49 @@ import (
 
 type fn func() tgbotapi.ReplyKeyboardMarkup
 
+func  SumPlan(chatId int64,keys fn)  {
+	//mobile, err := GetMobileNumber(chatId, telegramId)
+	//if err != nil {
+	//	//SendError(chatId, GetHomeKeys)
+	//} else {
+	//	if mobile != "" {
+	//		//
+	//		CheckCreditByMobile(chatId, telegramId, mobile)
+	//
+	//	} else {
+	//
+	//		SendForceReply(chatId, EnterPhonePlz)
+	//	}
+	//}
+fmt.Println(chatId,"\n",PlanConfirm)
+ msg:=tgbotapi.NewMessage(chatId,PlanConfirm)
+
+	msg.ReplyMarkup=keys()
+	bot.Send(msg)
+	}
+/*func SumPlan(chatId int64,telegramId int,keys fn)  {
+	//mobile, err := GetMobileNumber(chatId, telegramId)
+	//if err != nil {
+	//	//SendError(chatId, GetHomeKeys)
+	//} else {
+	//	if mobile != "" {
+	//		//
+	//		CheckCreditByMobile(chatId, telegramId, mobile)
+	//
+	//	} else {
+	//
+	//		SendForceReply(chatId, EnterPhonePlz)
+	//	}
+	//}
+	msg:=tgbotapi.NewMessage(chatId,PlanConfirm)
+	msg.ReplyMarkup=keys()
+}*/
+func SendVCF(chatId int64,text string){
+	file:=tgbotapi.NewDocumentUpload(chatId,vcf)
+	msg:=tgbotapi.NewMessage(chatId,vcfVal)
+	bot.Send(file)
+	bot.Send(msg)
+}
 func SendError(chatId int64, keys fn) {
 	msg := tgbotapi.NewMessage(chatId, "")
 	msg.ReplyMarkup = keys()
@@ -20,7 +63,7 @@ func SendError(chatId int64, keys fn) {
 }
 func SendTextMessage(chatId int64, text string, keys fn) {
 	msg := tgbotapi.NewMessage(chatId, text)
-	msg.ReplyMarkup = GetHomeKeys()
+	msg.ReplyMarkup = keys()
 	bot.Send(msg)
 }
 
@@ -152,15 +195,15 @@ func SetMobile(chatId int64, telegramId int, strmobile string) {
 		}
 	}
 }
-func AboutKeys(chatId int64) {
+/* func AboutKeys(chatId int64) {
 	msg := tgbotapi.NewMessage(chatId, AboutGift)
 	msg.ReplyMarkup = GetGiftKeys()
 	bot.Send(msg)
 }
-
-func ChargeKeys(chatId int64) {
-	msg := tgbotapi.NewMessage(chatId, EnterChargeType)
-	msg.ReplyMarkup = GetChargesKeys()
+*/
+func PlanKeys(chatId int64) {
+	msg := tgbotapi.NewMessage(chatId, PlanConfirm)
+	msg.ReplyMarkup = GetPlanKeys()
 	bot.Send(msg)
 }
 

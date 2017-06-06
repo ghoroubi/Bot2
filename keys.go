@@ -2,29 +2,23 @@ package main
 
 import (
 	"gopkg.in/telegram-bot-api.v4"
+	"fmt"
 )
 
-func GetChargesKeys() tgbotapi.ReplyKeyboardMarkup {
+func GetPlanKeys() tgbotapi.ReplyKeyboardMarkup {
 	rep := tgbotapi.ReplyKeyboardMarkup{}
-	c7 := tgbotapi.KeyboardButton{Text: Charg7}
-	c15 := tgbotapi.KeyboardButton{Text: Charg15}
-	c30 := tgbotapi.KeyboardButton{Text: Charg30}
-	c45 := tgbotapi.KeyboardButton{Text: Charg45}
-	c90 := tgbotapi.KeyboardButton{Text: Charg90}
-
+	accept := tgbotapi.KeyboardButton{Text: AcceptPlan}
+fmt.Print("inside of gtplan1")
 	home := tgbotapi.KeyboardButton{Text: Home}
 
 	commands := [][]tgbotapi.KeyboardButton{}
 
-	row0 := []tgbotapi.KeyboardButton{c15, c7}
-	commands = append(commands, row0)
-
-	row1 := []tgbotapi.KeyboardButton{c45, c30}
+	row1 := []tgbotapi.KeyboardButton{accept}
 	commands = append(commands, row1)
-
-	row2 := []tgbotapi.KeyboardButton{home, c90}
+	fmt.Print("inside of gtplan2")
+	row2 := []tgbotapi.KeyboardButton{home}
 	commands = append(commands, row2)
-
+	fmt.Print("inside of gtplan3")
 	rep.Keyboard = commands
 	rep.ResizeKeyboard = true
 	return rep
@@ -32,15 +26,11 @@ func GetChargesKeys() tgbotapi.ReplyKeyboardMarkup {
 
 func GetGiftKeys() tgbotapi.ReplyKeyboardMarkup {
 	rep := tgbotapi.ReplyKeyboardMarkup{}
-	occ := tgbotapi.KeyboardButton{Text: OccasionButton}
+
 	home := tgbotapi.KeyboardButton{Text: Home}
 	lottery := tgbotapi.KeyboardButton{Text: LotteryKey}
 
 	commands := [][]tgbotapi.KeyboardButton{}
-	if showOccasion {
-		row0 := []tgbotapi.KeyboardButton{occ}
-		commands = append(commands, row0)
-	}
 
 	row1 := []tgbotapi.KeyboardButton{lottery}
 	commands = append(commands, row1)
