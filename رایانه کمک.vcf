@@ -1,0 +1,16 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//Apple Inc.//Mac OS X 10.12.5//EN
+N:Komak;Rayaneh;;;
+FN:رایانه کمک
+ORG:رایانه کمک;
+EMAIL;type=INTERNET;type=HOME;type=pref:info@rayanehkomak.com
+TEL;type=CELL;type=VOICE;type=pref:+98217129
+item1.TEL:02177196090
+item1.X-ABLabel:روابط عمومی رایانه کمک
+item2.URL;type=pref:www.rayanehkomak.com
+item2.X-ABLabel:_$!<HomePage>!$_
+X-ABShowAs:COMPANY
+UID:60dbe278952b6a46
+X-ABUID:BFC9E328-7CB3-4122-8913-6F93B53F1550:ABPerson
+END:VCARD

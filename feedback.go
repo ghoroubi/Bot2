@@ -7,57 +7,99 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
-	"time"
+	//	"time"
+	//	"log"
+	//	"net/url"
 )
 
 type fn func() tgbotapi.ReplyKeyboardMarkup
 
-func  SumPlan(chatId int64,keys fn)  {
-	//mobile, err := GetMobileNumber(chatId, telegramId)
-	//if err != nil {
-	//	//SendError(chatId, GetHomeKeys)
-	//} else {
-	//	if mobile != "" {
-	//		//
-	//		CheckCreditByMobile(chatId, telegramId, mobile)
-	//
-	//	} else {
-	//
-	//		SendForceReply(chatId, EnterPhonePlz)
-	//	}
-	//}
-fmt.Println(chatId,"\n",PlanConfirm)
- msg:=tgbotapi.NewMessage(chatId,PlanConfirm)
-
-	msg.ReplyMarkup=keys()
-	bot.Send(msg)
+//If User Choose to check his/her active plan
+func CheckMyPlan(chatId int64, tid int, keyboard fn) {
+	fmt.Println("Your Plan  is your Mobile:::")
+	mob := GetMobile(chatId, tid)
+	if mob == "" {
+		SendTextMessage(chatId, YouHaveNotPackage, GetHomeKeys)
+		return
+	} else {
+		res := Check(mob,chatId)
+		msg := tgbotapi.NewMessage(chatId, res)
+		msg.ReplyMarkup = keyboard()
+		bot.Send(msg)
 	}
-/*func SumPlan(chatId int64,telegramId int,keys fn)  {
-	//mobile, err := GetMobileNumber(chatId, telegramId)
-	//if err != nil {
-	//	//SendError(chatId, GetHomeKeys)
-	//} else {
-	//	if mobile != "" {
-	//		//
-	//		CheckCreditByMobile(chatId, telegramId, mobile)
-	//
-	//	} else {
-	//
-	//		SendForceReply(chatId, EnterPhonePlz)
-	//	}
-	//}
-	msg:=tgbotapi.NewMessage(chatId,PlanConfirm)
-	msg.ReplyMarkup=keys()
-}*/
-func SendVCF(chatId int64,text string){
-	file:=tgbotapi.NewDocumentUpload(chatId,vcf)
-	msg:=tgbotapi.NewMessage(chatId,vcfVal)
-	bot.Send(file)
-	bot.Send(msg)
 }
-func SendError(chatId int64, keys fn) {
+
+func GetUserInfo(chatId int64, telegramId int) {
+	m := GetMobile(chatId, telegramId)
+	if m == "" {
+		TUser.TelegramID = telegramId
+		return
+	}
+	TUser.TelegramID = telegramId
+	TUser.MobileNumber = m
+}
+
+func SecCodeReview(chatId int64, code string) {
+	intCode, err := strconv.Atoi(code)
+	fmt.Println(intCode, ",User:", TUser.MobileNumber)
+	if err != nil {
+		SendError(chatId, GetHomeKeys)
+	}
+	if intCode != SecurityCode {
+		SendForceReply(chatId, WrongCode)
+		return
+	}
+
+	fmt.Println(TUser.MobileNumber)
+	//CheckMobileNumber()
+	tid := TUser.TelegramID
+	tmob := TUser.MobileNumber
+	NewUserQuery := fmt.Sprintf("INSERT INTO tbcodes(telegramid,mobile) VALUES (%d , '%s')", tid, tmob)
+	db.Exec(NewUserQuery)
+	af :=true
+CheckMobileNumber(tmob,chatId,&af)
+}
+func CheckMobileNumber(mobile string, chatId int64, allowFlag *bool) {
+	fmt.Println("Mobile:", mobile, "is in checking progress")
+	activePlan := Check(mobile, chatId)
+	TUser.MobileNumber=mobile
+	NewUserQuery := fmt.Sprintf("INSERT INTO tbcodes(telegramid,mobile) VALUES (%d , '%s')", mobile,TUser.TelegramID)
+	db.Exec(NewUserQuery)
+	if activePlan=="ok" {
+	*allowFlag=true
+	}else if activePlan != "NoPackage" {
+		*allowFlag = false
+		fmt.Println("NO ACTIVE PLAN", activePlan)
+		SendTextMessage(chatId, activePlan, GetHomeKeys)
+	} else {
+		*allowFlag = true
+	}
+}
+func CallAPI(chatId int64, tid int, mob string) {
+
+	urlToSend := fmt.Sprintf("payment.rayanehkomak.ir/rk/gateway/smp?type=callPackage&mobile=%s&pid=%s&tid=%d", mob, PID, tid)
+	//toSendUrl:=url+urlencode(tempUrl)
+	msg := tgbotapi.NewMessage(chatId, urlToSend)
+	msg.ReplyMarkup = GetHomeKeys()
+	bot.Send(msg)
+	fmt.Println("Calling API", tid, ":", mob)
+	NewUserQuery := fmt.Sprintf("INSERT INTO tbcodes(telegramid,mobile) VALUES (%d , '%s')", tid, mob)
+	db.Exec(NewUserQuery)
+
+}
+func SendVCF(chatId int64, text string) {
+	line1:="☎  ☎  021-7129 ☎  ☎ \n"
+	line2:="❇️ شماره تماس با کارشناسان رایانه کمک:   ۰۲۱۷۱۲۹ \n"
+	msg:=line1+line2+vcfVal
+	msg2Send := tgbotapi.NewMessage(chatId, msg)
+	bot.Send(msg2Send)
+
+	file := tgbotapi.NewDocumentUpload(chatId, vcf)
+	bot.Send(file)
+}
+func SendError(chatId int64, keyboard fn) {
 	msg := tgbotapi.NewMessage(chatId, "")
-	msg.ReplyMarkup = keys()
+	msg.ReplyMarkup = keyboard()
 	msg.Text = SystemError
 	bot.Send(msg)
 }
@@ -68,143 +110,26 @@ func SendTextMessage(chatId int64, text string, keys fn) {
 }
 
 func SendForceReply(chatId int64, text string) {
+	fmt.Println("ForceReply: ", text)
 	msg := tgbotapi.NewMessage(chatId, text)
 	msg.ReplyMarkup = tgbotapi.ForceReply{ForceReply: true}
 	bot.Send(msg)
 }
 
-type SCharge struct {
-	Id     string
-	Charge int
-}
-
-func GetMobileNumber(chatId int64, telegramId int) (string, error) {
-	var mobile string
-	result, err := db.Query("select mobile from tbTelegramUsers where telegramId=" + strconv.Itoa(telegramId))
-	if err != nil {
-		return "", err
-	}
-	for result.Next() {
-		_ = result.Scan(&mobile)
-	}
-
-	return mobile, nil
-}
-
-func CheckCreditByMobile(chatId int64, telegramId int, mobile string) {
+func GetMobile(chatId int64, telegramId int) string {
 	msg := tgbotapi.NewMessage(chatId, "")
 	msg.ReplyMarkup = GetHomeKeys()
-
-	res, err := http.Get("http://api.rayanehkomak.com/crm/checkcharge?mobile=" + mobile)
-	if err != nil {
-		SendError(chatId, GetHomeKeys)
-		return
-	}
-
-	body, err := ioutil.ReadAll(res.Body)
-	var data SCharge
-	json.Unmarshal(body, &data)
-	msg.Text = fmt.Sprintf(CreditVal, data.Charge)
-	bot.Send(msg)
-
-}
-func CheckCreditByCode(chatId int64, telegramId int, code string) {
-	strmobile := GetMobileByCode(chatId, telegramId, code)
-	if strmobile != "" {
-		CheckCreditByMobile(chatId, telegramId, strmobile)
-		UpdateCode(chatId, telegramId)
-		SetMobile(chatId, telegramId, strmobile)
-	}
-}
-
-func ChargeByCode(chatId int64, telegramId int, code string) {
-	strmobile := GetMobileByCode(chatId, telegramId, code)
-	if strmobile != "" {
-
-		sum, err := SetRandGift(chatId, telegramId)
-		if err == nil {
-			RKCharge(chatId, strmobile, sum, GetGiftKeys)
-			UpdateCode(chatId, telegramId)
-
-			SetMobile(chatId, telegramId, strmobile)
-		}
-	}
-}
-
-func GetMobileByCode(chatId int64, telegramId int, code string) string {
-	msg := tgbotapi.NewMessage(chatId, "")
-	msg.ReplyMarkup = GetHomeKeys()
-
 	// get mobile
-	var strmobile, strdate string
-	var id int
-	result, err := db.Query("select id,mobile,date from  tbCodes where telegramId=" + strconv.Itoa(telegramId) + " and code=" + code + " and isused=0 order by id desc ")
+	var strmobile string
+	//var id int
+	err := db.Get(&strmobile, "select mobile from tbCodes where telegramId="+strconv.Itoa(telegramId))
+	fmt.Println(strmobile)
 	if err != nil {
-		SendError(chatId, GetHomeKeys)
+		//SendError(chatId, GetHomeKeys)
+		strmobile = ""
 		return ""
 	}
-
-	for result.Next() {
-		_ = result.Scan(&id, &strmobile, &strdate)
-	}
-	if strmobile == "" {
-		msg.Text = CodeError
-		bot.Send(msg)
-		return ""
-	}
-
-	tim1, err := time.Parse(LongFormat, strdate)
-	oneday := time.Hour * 24 * 1
-	tim2 := tim1.Add(oneday)
-	now := time.Now()
-	if !(now.Format(LongFormat) > tim1.Format(LongFormat) && now.Format(LongFormat) < tim2.Format(LongFormat)) {
-		msg.Text = CodeError
-		bot.Send(msg)
-		return ""
-	}
-
 	return strmobile
-}
-func UpdateCode(chatId int64, telegramId int) {
-
-	strQ := "update tbCodes set isused=1 where telegramId=" + strconv.Itoa(telegramId)
-	_, err = db.Exec(strQ)
-	if err != nil {
-		SendError(chatId, GetHomeKeys)
-		return
-	}
-}
-
-func SetMobile(chatId int64, telegramId int, strmobile string) {
-
-	var id int
-	result, err := db.Query("select id from tbTelegramUsers where telegramId=" + strconv.Itoa(telegramId))
-	if err != nil {
-		SendError(chatId, GetHomeKeys)
-		return
-	}
-	for result.Next() {
-		_ = result.Scan(&id)
-	}
-	if id == 0 {
-		strQ := "insert into tbTelegramUsers(telegramId,mobile) values(" + strconv.Itoa(telegramId) + "," + strmobile + ")"
-		_, err = db.Exec(strQ)
-		if err != nil {
-			SendError(chatId, GetHomeKeys)
-			return
-		}
-	}
-}
-/* func AboutKeys(chatId int64) {
-	msg := tgbotapi.NewMessage(chatId, AboutGift)
-	msg.ReplyMarkup = GetGiftKeys()
-	bot.Send(msg)
-}
-*/
-func PlanKeys(chatId int64) {
-	msg := tgbotapi.NewMessage(chatId, PlanConfirm)
-	msg.ReplyMarkup = GetPlanKeys()
-	bot.Send(msg)
 }
 
 func urlencode(s string) (result string) {
@@ -235,246 +160,121 @@ func urlencode(s string) (result string) {
 	return result
 }
 
-func SendSecurityCode(chatId int64, telegramId int, mobile string, typ string, keys fn) {
-	var strDate string
-	var isUsed bool
-	var intCode int
-	result, err := db.Query("select top 1 Date,IsUsed,Code from  tbCodes where isused=0 and telegramId=" + strconv.Itoa(telegramId) + " order by id desc ")
-	if err != nil {
-		SendError(chatId, keys)
-		return
-	}
-
-	for result.Next() {
-		_ = result.Scan(&strDate, &isUsed, &intCode)
-	}
-
-	tim1, err := time.Parse(LongFormat, strDate)
-	oneday := time.Hour * 24 * 1
-	tim2 := tim1.Add(oneday)
-	now := time.Now()
-
+func SendSecCode(chatId int64, mobile string) {
 	var code int
-	if isUsed == false && now.Format(LongFormat) > tim1.Format(LongFormat) && now.Format(LongFormat) < tim2.Format(LongFormat) {
-		code = intCode
-	} else {
-		code = random(1000, 9999)
-		castedVal := time.Now().Format(LongFormat)
-		strQ := "insert into tbCodes (TelegramId, Code,Date, IsUsed,Mobile) values (" + strconv.Itoa(telegramId) + "," + strconv.Itoa(code) + ",'" + castedVal + "',0,'" + mobile + "')"
-		_, err = db.Exec(strQ)
-		if err != nil {
-			SendError(chatId, keys)
-			return
-		}
-	}
 
+	code = random(1000, 9999)
+	fmt.Println(code)
+	SecurityCode = code
+	//m:="09364921604"
 	req, err := http.NewRequest("POST", "http://api.rayanehkomak.com/rk/sms/send?num="+mobile+"&txt="+urlencode(fmt.Sprintf(SecCode, code)), nil)
 	client := &http.Client{}
 	_, err = client.Do(req)
 	if err != nil {
-		SendError(chatId, keys)
-		return
-	}
-
-	if typ == "CheckCredit" {
-		SendForceReply(chatId, EnterSecCode)
-	} else if typ == "RandomCharge" {
-		SendForceReply(chatId, EnterSecCode_R)
-
-	}
-}
-
-func RKCharge(chatId int64, mobile string, charge int, keys fn) {
-
-	msg := tgbotapi.NewMessage(chatId, "")
-	msg.ReplyMarkup = keys()
-	res, err := http.Get("http://api.rayanehkomak.com/crm/charge?mobile=" + mobile + "&charge=" + strconv.Itoa(charge))
-	if err != nil {
-		//hanle error
-		SendError(chatId, GetGiftKeys)
-		return
-	}
-
-	if res.StatusCode == 200 {
-		msg.Text = fmt.Sprintf(ChargeActivated, charge, mobile)
-		bot.Send(msg)
-	} else {
-		SendError(chatId, keys)
+		SendError(chatId, GetHomeKeys)
 		return
 	}
 }
+func Check(mobile string, chatId int64) string {
+	var planStatus string
 
-func DoChargeOccasion(chatId int64, telegramId int, charge int) {
-	msg := tgbotapi.NewMessage(chatId, "")
-	msg.ReplyMarkup = GetGiftKeys()
+	res, err := http.Get("http://api.rayanehkomak.com/crm/customer/callpackages?mobile=" + mobile)
 
-	var lstc int
-	result, err := db.Query("select top 1 TelegramId from  tbOccasionPromotion  where telegramId=" + strconv.Itoa(telegramId) + " and occasion='" + occasion + "'")
 	if err != nil {
-		SendError(chatId, GetGiftKeys)
-		return
+		//Panic(err)
+		fmt.Println("Error Occured!")
+	}
+	body, err := ioutil.ReadAll(res.Body)
+	var customer Customer
+	json.Unmarshal(body, &customer)
+
+	x := len(customer.PurchasedCallPackages)
+	if x == 0 && UserWantToView {
+
+		l1 := "⚠️ کاربر گرامی برای شماره %s هیچ بسته ای در سیستم ثبت نشده است "
+		l2 := "برای فعال سازی لطفا یکی از بسته های موجود را انتخاب نمایید"
+		planStatus = fmt.Sprintf(l1+l2+Title, mobile)
+	}else if x==0 && UserWantToView==false{
+	planStatus="ok"
+	}else if x!= 0 && UserWantToView {
+		ShowPlanDetails(mobile,chatId,customer)
+	}else if x!=0 && UserWantToView==false {
+		SendTextMessage(chatId,YouHaveActivePlan,GetHomeKeys)
 	}
 
-	for result.Next() {
-		_ = result.Scan(&lstc)
-	}
-	if lstc != 0 {
-		msg.Text = OccasionError
-		bot.Send(msg)
-		return
-	}
+	return planStatus
+}
 
-	_, err = db.Exec("insert into tbOccasionPromotion (TelegramId, Gift, Date,Occasion) values (" + strconv.Itoa(telegramId) + "," + strconv.Itoa(charge) + ", '" + TodayWitZeroStr() + "','" + occasion + "')")
-	if err != nil {
-		SendError(chatId, GetGiftKeys)
-		return
-	}
+//end of Check
+func ShowPlanDetails(mobile string, chatId int64, c Customer) {
+	var Plan_Days int
+	var planStatus string
+	Plan_Days = c.PurchasedCallPackages[0].DaysToExpire
+	fmt.Println("Days2Expire:", Plan_Days)
+	//Plan_Describtion: = c.PurchasedCallPackages[0].CallPackage.description
+	fmt.Println("describtion: ",c.PurchasedCallPackages[0].CallPackage.description )
 
-	msg.Text = fmt.Sprintf(ChargedSuccessfully, charge)
+	//end of switch
+	line2 := fmt.Sprintf(" ✅ بسته فعلی برای شماره موبایل  %s به مدت %d روز دیگر اعتبار دارد",mobile,Plan_Days)
+	line2=line2+"\n 💠💠💠💠💠💠💠💠💠💠💠💠💠💠💠💠💠"
+	switch UserWantToView {
+	case true:
+		masterLine := "\n" + line2
+		planStatus = masterLine
+	case false:
+		masterline := YouHaveActivePlan + "\n" + line2
+		planStatus = masterline
+	}
+	fmt.Println(planStatus)
+	msg:=tgbotapi.NewMessage(chatId,planStatus)
+	msg.ReplyMarkup=GetHomeKeys()
 	bot.Send(msg)
-	SendForceReply(chatId, EnterPhoneForUse)
-
 }
+func ShowInvoice(chatId int64, pid string, mobile string) {
+	var strPid string
+	NewUserQuery := fmt.Sprintf("INSERT INTO tbcodes(telegramid,mobile) VALUES (%d , '%s')", int(chatId), mobile)
+	db.Exec(NewUserQuery)
+	switch pid {
+	case PackageOneID:
+		strPid = "خرید بسته نامحدود یک ساله \n"
+		t2 := fmt.Sprintf("برای شماره موبایل : %s", mobile)
+		fee2 := "قیمت بسته : ۸۸۰۰۰ تومان"
 
-func SetRandGift(chatId int64, telegramId int) (int, error) {
-	r, _ := db.Query("select sum(gift) from tbRandPromotion where telegramId=" + strconv.Itoa(telegramId) + " and IsUsed=0")
-	var sum int
-
-	for r.Next() {
-		_ = r.Scan(&sum)
-	}
-
-	_, err = db.Exec("update tbRandPromotion set IsUsed=1 where telegramId=" + strconv.Itoa(telegramId))
-	if err != nil {
-		SendError(chatId, GetGiftKeys)
-		return 0, err
-	}
-	return sum, nil
-}
-func DoCharge(chatId int64, telegramId int, charge int) {
-	msg := tgbotapi.NewMessage(chatId, "")
-	msg.ReplyMarkup = GetGiftKeys()
-
-	r, err := db.Query("select sum(gift) from tbRandPromotion where telegramId=" + strconv.Itoa(telegramId) + " and IsUsed=0")
-	var sum int
-
-	for r.Next() {
-		_ = r.Scan(&sum)
-	}
-
-	var lstc int
-	result, err := db.Query("select top 1 TelegramId from  tbRandPromotion  where telegramId=" + strconv.Itoa(telegramId) + " and date='" + TodayWitZeroStr() + "'")
-	if err != nil {
-		SendError(chatId, GetGiftKeys)
-		return
-	}
-
-	for result.Next() {
-		_ = result.Scan(&lstc)
-	}
-
-	if lstc != 0 {
-		msg.Text = LotteryError + " " + fmt.Sprintf(LotterySum, sum)
+		l1:="موافقتنامه: https://goo.gl/pPzj1z "
+		l2:="کیفیت خدمت: سطح۱ "
+		tax := "مبلغ نهایی(+۹٪ ارزش افزوده): 95,920 تومان "
+		ifconfirm2 := "جهت تایید و ادامه بر روی لینک زیر کلیک کنید: \n "
+		final2 := strPid + t2 + "\n" + fee2 + "\n" + l1+ "\n"+l2+"\n" +tax + "\n" + ifconfirm2
+		msg := tgbotapi.NewMessage(chatId, final2)
+		/////////
 		bot.Send(msg)
-
-	} else {
-
-		_, err = db.Exec("insert into tbRandPromotion (TelegramId, Gift, Date) values (" + strconv.Itoa(telegramId) + "," + strconv.Itoa(charge) + ", '" + TodayWitZeroStr() + "')")
-		if err != nil {
-			SendError(chatId, GetGiftKeys)
-			return
-		}
-		msg.Text = fmt.Sprintf(LottSuccess, charge) + " " + fmt.Sprintf(LotterySum, sum+charge)
-		bot.Send(msg)
-		sum = sum + charge
-
-	}
-	if sum > maxRand {
-
-		mobile, err := GetMobileNumber(chatId, telegramId)
-		if err != nil {
-			SendError(chatId, GetHomeKeys)
-		} else {
-			if mobile != "" {
-				sum, err := SetRandGift(chatId, telegramId)
-				if err == nil {
-
-					RKCharge(chatId, mobile, sum, GetGiftKeys)
-				}
-
-			} else {
-				SendForceReply(chatId, EnterPhoneForGift)
-
-			}
-		}
+	case PackageTwoID:
+		strPid = "خرید بسته نامحدود ۳ ماهه \n"
+		t2 := fmt.Sprintf("برای شماره موبایل : %s", mobile)
+		fee2 := "قیمت بسته : ۵۵۰۰۰ تومان"
+		l1:="موافقتنامه: https://goo.gl/pPzj1z "
+		l2:="کیفیت خدمت: سطح۱ "
+		tax := "مبلغ نهایی(+۹٪ ارزش افزوده): 59,950 تومان "
+		ifconfirm2 := "جهت تایید و ادامه بر روی لینک زیر کلیک کنید: \n "
+		final2 := strPid + t2 + "\n" + fee2 + "\n" +l1+"\n"+l2+"\n"+ tax + "\n" + ifconfirm2
+		msg2 := tgbotapi.NewMessage(chatId, final2)
+		msg2.ReplyMarkup = GetHomeKeys()
+		bot.Send(msg2)
 
 	}
+	//	strMobile:="شماره موبایل:"
+	CallAPI(chatId, int(chatId), mobile)
 }
-
-// func Charge(chatId int64, mobile string, telegramId int) {
-// 	msg := tgbotapi.NewMessage(chatId, "")
-
-// 	var sumCharg = 0
-
-// 	msg.ReplyMarkup = GetHomeKeys()
-
-// 	var lstc int
-// 	result, err := db.Query("select top 1 Cid from  tbPromotion order by Id desc")
-// 	if err != nil {
-// 		SendError(chatId, GetHomeKeys)
-// 		return
-// 	}
-// 	for result.Next() {
-// 		_ = result.Scan(&lstc)
-// 	}
-
-// 	var query string
-// 	strDate := TodayStr()
-// 	strZeroDate := TodayWitZeroStr()
-// 	if giftForToday {
-// 		query = "select top " + strconv.Itoa(callCount) + " Cmobile, Dur_Sec, MDate, C.Cid cid from  MohDReplicated md inner join tbCalls c on md.counter = c.Ccounter inner join tbCustomers cs on c.Ccustomer = cs.Cid where CMobile='" + mobile + "' and Mdate = '" + strZeroDate + "' and Cdate = '" + strDate + "' and c.Cid > " + strconv.Itoa(lstc)
-// 	} else {
-// 		query = "select top " + strconv.Itoa(callCount) + " Cmobile, Dur_Sec, MDate, C.Cid cid from  MohDReplicated md inner join tbCalls c on md.counter = c.Ccounter inner join tbCustomers cs on c.Ccustomer = cs.Cid where CMobile='" + mobile + "' and c.Cid > " + strconv.Itoa(lstc) + " order by c.Cid desc"
-// 	}
-
-// 	calls, err := db.Query(query)
-// 	if err != nil {
-// 		SendError(chatId, GetHomeKeys)
-// 		return
-// 	}
-// 	for calls.Next() {
-// 		var Cmobile, Mdate string
-// 		var Dur_Sec, Cid int
-// 		err = calls.Scan(&Cmobile, &Dur_Sec, &Mdate, &Cid)
-// 		if Dur_Sec > second {
-// 			dur_Call := Dur_Sec / second
-// 			charg1 := dur_Call * charge
-
-// 			b := Dur_Sec % second
-
-// 			mcharge := ((b * charge) / second) + charg1
-
-// 			res, err := http.Get("http://api.rayanehkomak.com/crm/charge?mobile=" + Cmobile + "&charge=" + strconv.Itoa(mcharge) + "&second=" + strconv.Itoa(Dur_Sec))
-// 			if err != nil {
-// 				SendError(chatId, GetHomeKeys)
-// 				break
-// 			}
-// 			if res.StatusCode == 200 {
-// 				_, err := db.Exec("insert into tbPromotion (Cid, Dur_Sec, Gift_Price, MDate, Cmobile,Telegram) values (" + strconv.Itoa(Cid) + ", '" + strconv.Itoa(Dur_Sec) + "', '" + strconv.Itoa(mcharge) + "', '" + Mdate + "', '" + mobile + "'," + strconv.Itoa(telegramId) + ")")
-// 				if err != nil {
-// 					SendError(chatId, GetHomeKeys)
-// 					break
-// 				}
-// 				sumCharg = sumCharg + mcharge
-// 			}
-// 		}
-// 	}
-// 	if err == nil {
-// 		if sumCharg == 0 {
-// 			msg.Text = NoFund
-// 		} else {
-// 			msg.Text = fmt.Sprintf(ChargedSuccessfully, sumCharg)
-// 		}
-// 	}
-// 	bot.Send(msg)
-// }
+func MobileIsValid(mobile string)bool{
+	var IsMobile bool
+	lenFlag:=len(mobile)==11
+	fmt.Println("len:",len(mobile))
+	firstDigitFlag:=string(mobile[0]) == "0"
+	fmt.Println("firstDigit:",string(mobile[0]))
+	secDigitFlag:=string(mobile[1])=="9"
+	fmt.Println("SecondDigit",string(mobile[1]))
+	IsMobile=lenFlag && firstDigitFlag && secDigitFlag
+	//IsMobile=firstDigitFlag && secDigitFlag
+	//fdigit:=
+	return IsMobile
+}

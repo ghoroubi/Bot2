@@ -1,10 +1,5 @@
-public:
-  Token: "212100733:AAGnNPR1D3tsnlJ6bEVbK8D53migQkyBMf0"
-  MaxRandCharge: 3000
-db:
-  Name: "SystemBankOffline"
-  Password: "6663ta6dareh"
-  UserId: "offline"
-  Server: "192.168.2.20/rkBank"
+Public:
+  Token: "418239943:AAEIVhbWDEuom6_B1B_0ueR9krM7drJ8KrA"
 file:
-  VCFile: "/Users/newuser/1.vcf"
+  VCFile: "رایانه کمک.vcf"
+

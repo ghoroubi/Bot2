@@ -6,6 +6,9 @@ import (
 	"strconv"
 	"time"
 )
+//var DBEngine,DBName,DBUser,DBHost,DBPassword string
+
+
 
 func random(min, max int) int {
 	rand.Seed(time.Now().Unix())
@@ -20,19 +23,9 @@ func GetConf() {
 	if err != nil {
 		panic("could not configure app")
 	}
-	maxRand = conf.GetInt("public.MaxRandCharge")
-	token = conf.GetString("public.Token")
-	dbName = conf.GetString("db.Name")
-	password = conf.GetString("db.Password")
-	userId = conf.GetString("db.UserId")
-	server = conf.GetString("db.Server")
+	token = conf.GetString("Public.Token")
 	vcf=conf.GetString("file.VCFile")
-}
 
-func TodayStr() string {
-	year, m, d := time.Now().Date()
-	strDate := strconv.Itoa(year) + "/" + strconv.Itoa(int(m)) + "/" + strconv.Itoa(d)
-	return strDate
 }
 
 func TodayWitZeroStr() string {
